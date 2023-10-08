@@ -1,5 +1,4 @@
 const verifyToken = require('../middlewaer/vetToken')
-const fs = require('fs');
 const multer = require('multer');
 
 
@@ -60,31 +59,29 @@ function promotionRouter(app, connection) {
     });
 
 
-    app.post('/upload', verifyToken, (req, res) => {
+    app.post('/upload', verifyToken, multer().single('image'), (req, res) => {
         if (!req.file) {
             res.status(400).json({ error: 'No image uploaded' });
             return;
         }
-
+    
         const imagePath = req.file.path;
-        const imgData = fs.readFileSync(imagePath);
-        const imgBase64 = imgData.toString('base64');
-
+        const imgBase64 = req.file.buffer.toString('base64'); // แก้ไขนี้เป็น req.file.buffer.toString('base64')
+    
         const insertSql = 'INSERT INTO promotions (img, ent_id) VALUES (?, ?)';
         const values = [Buffer.from(imgBase64, 'base64'), req.userId];
-
+    
         connection.query(insertSql, values, (err, result) => {
             if (err) {
                 console.error('Error inserting image data into database:', err);
                 res.status(500).json({ error: 'Failed to insert image data into database' });
                 return;
             }
-
-            fs.unlinkSync(imagePath);
-
+    
             res.json({ message: 'Image uploaded and inserted into the database' });
         });
     });
+    
 }
 
 module.exports = promotionRouter;
