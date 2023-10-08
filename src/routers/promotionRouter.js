@@ -2,7 +2,6 @@ const verifyToken = require('../middlewaer/vetToken')
 const fs = require('fs');
 const multer = require('multer');
 
-const upload = multer({ dest: 'uploads/' });
 
 function promotionRouter(app, connection) {
     app.get('/promotions', (req, res) => {
@@ -62,16 +61,15 @@ function promotionRouter(app, connection) {
 
 
     app.post('/upload', verifyToken, (req, res) => {
-        // ตรวจสอบว่า client ส่งรูปภาพมาหรือไม่
-        if (!req.body.image) {
-            res.status(400).json({ error: 'No image provided' });
+        if (!req.file) {
+            res.status(400).json({ error: 'No image uploaded' });
             return;
         }
 
-        // รับข้อมูลรูปภาพจาก client
-        const imgBase64 = req.body.image;
+        const imagePath = req.file.path;
+        const imgData = fs.readFileSync(imagePath);
+        const imgBase64 = imgData.toString('base64');
 
-        // เพิ่มข้อมูลรูปภาพลงในฐานข้อมูล
         const insertSql = 'INSERT INTO promotions (img, ent_id) VALUES (?, ?)';
         const values = [Buffer.from(imgBase64, 'base64'), req.userId];
 
@@ -82,10 +80,11 @@ function promotionRouter(app, connection) {
                 return;
             }
 
-            res.json({ message: 'Image inserted into the database' });
+            fs.unlinkSync(imagePath);
+
+            res.json({ message: 'Image uploaded and inserted into the database' });
         });
     });
-
 }
 
 module.exports = promotionRouter;
